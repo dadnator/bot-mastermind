@@ -156,6 +156,7 @@ async def jouer_mastermind(interaction: discord.Interaction, game_data):
 
 
 # --- NOUVELLE VUE POUR LE CHOIX DU CODE SECRET ---
+# --- NOUVELLE VUE POUR LE CHOIX DU CODE SECRET ---
 class SecretCodeView(discord.ui.View):
     def __init__(self, game_data):
         super().__init__(timeout=300)
@@ -169,23 +170,25 @@ class SecretCodeView(discord.ui.View):
         self.add_buttons()
 
     def add_buttons(self):
+        # Add color buttons
         for couleur in COULEURS:
             button = discord.ui.Button(label=couleur, style=discord.ButtonStyle.secondary, emoji=couleur)
             button.callback = self.add_color
             self.add_item(button)
 
-        self.add_item(discord.ui.Button(label="❌ Effacer", style=discord.ButtonStyle.red, custom_id="clear", row=1))
-        self.add_item(discord.ui.Button(label="✅ Valider", style=discord.ButtonStyle.green, custom_id="validate", row=1))
-        
-        for item in self.children:
-            if isinstance(item, discord.ui.Button) and item.custom_id == "clear":
-                item.callback = self.clear_code
-            if isinstance(item, discord.ui.Button) and item.custom_id == "validate":
-                item.callback = self.validate_code
+        # Add control buttons
+        clear_button = discord.ui.Button(label="❌ Effacer", style=discord.ButtonStyle.red, custom_id="clear", row=1)
+        clear_button.callback = self.clear_code
+        self.add_item(clear_button)
 
+        validate_button = discord.ui.Button(label="✅ Valider", style=discord.ButtonStyle.green, custom_id="validate", row=1)
+        validate_button.callback = self.validate_code
+        self.add_item(validate_button)
+        
     async def add_color(self, interaction: discord.Interaction):
         if len(self.code_secret) < LONGUEUR_CODE:
-            # On utilise interaction.item pour accéder au bouton cliqué directement
+            # We use interaction.item to directly get the button that was clicked.
+            # This is the most reliable way to get the emoji name.
             self.code_secret.append(interaction.item.emoji.name)
             self.update_embed()
             await interaction.response.edit_message(embed=self.embed, view=self)
