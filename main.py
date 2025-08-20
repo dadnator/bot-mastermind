@@ -66,6 +66,7 @@ def calculer_indices(code_secret, proposition):
     return noirs, blancs
 
 # --- NOUVELLE VUE POUR GÉRER LA PARTIE POUR LE JOUEUR 2 ---
+# --- NOUVELLE VUE POUR GÉRER LA PARTIE POUR LE JOUEUR 2 ---
 class MastermindGameView(discord.ui.View):
     def __init__(self, game_data, game_message):
         super().__init__(timeout=120)  # Timeout de 2 minutes pour chaque tour
@@ -104,7 +105,14 @@ class MastermindGameView(discord.ui.View):
             color=discord.Color.blue()
         )
         embed.add_field(name="Couleurs disponibles", value=" | ".join(COULEURS), inline=False)
-
+        
+        # Le nouveau champ a été ajouté ici
+        embed.add_field(
+            name="Indices", 
+            value="🖤 **Noir** : Bonne couleur, bonne place.\n🤍 **Blanc** : Bonne couleur, mauvaise place.",
+            inline=False
+        )
+        
         historique_str = ""
         if not self.historique_tours:
             historique_str = "`Aucune proposition pour le moment.`"
@@ -119,7 +127,6 @@ class MastermindGameView(discord.ui.View):
         return embed
 
     async def on_timeout(self):
-        # Le croupier gagne en cas de timeout
         gagnant = self.game_data['joueur1']
         await self.end_game(gagnant)
 
@@ -130,7 +137,6 @@ class MastermindGameView(discord.ui.View):
 
         if len(self.proposition_actuelle) < LONGUEUR_CODE:
             try:
-                # Chercher le bouton cliqué pour être compatible avec plus de versions
                 button_clicked = next(
                     (item for item in self.children if isinstance(item, discord.ui.Button) and item.custom_id == interaction.data.get("custom_id")),
                     None
