@@ -397,13 +397,50 @@ class MastermindView(discord.ui.View):
         if interaction.user.id != self.croupier.id:
             await interaction.response.send_message("❌ Seul le croupier peut lancer la partie.", ephemeral=True)
             return
+
         game_data = mastermind_games.get(self.message_id)
-        await interaction.response.send_message(
-            content=f"**{game_data['joueur1'].mention}**, c'est à toi de choisir le code secret !",
-            embed=SecretCodeView(game_data).embed,
-            view=SecretCodeView(game_data),
-            ephemeral=True
+
+        # Envoie une réponse d'interaction initiale qui va être mise à jour
+        await interaction.response.edit_message(content="La partie va commencer ! Le croupier a lancé le jeu.", embed=None, view=None)
+
+        # On crée le bouton que seul le joueur 1 peut utiliser
+        start_button = discord.ui.Button(
+            label="Créer mon code secret",
+            style=discord.ButtonStyle.primary,
+            custom_id=f"start_code_selection_{self.joueur1.id}"
         )
+
+        async def start_game_callback(btn_interaction: discord.Interaction):
+            # Vérifie que c'est bien le joueur 1 qui a cliqué
+            if btn_interaction.user.id != self.joueur1.id:
+                await btn_interaction.response.send_message("❌ Ce bouton est réservé au joueur 1.", ephemeral=True)
+                return
+
+            # Envoie la vue du code secret en tant que message éphémère au joueur 1
+            await btn_interaction.response.send_message(
+                content="C'est à toi de choisir le code secret !",
+                embed=SecretCodeView(game_data).embed,
+                view=SecretCodeView(game_data),
+                ephemeral=True
+            )
+            # Désactive le bouton pour qu'il ne puisse être utilisé qu'une seule fois
+            start_button.disabled = True
+            await btn_interaction.message.edit(view=btn_interaction.message.view)
+
+        start_button.callback = start_game_callback
+        
+        # Envoie un nouveau message avec le bouton pour le joueur 1
+        await interaction.channel.send(
+            f"La partie a été lancée par le croupier ! **{self.joueur1.mention}**, clique sur le bouton ci-dessous pour créer ton code secret.",
+            view=discord.ui.View().add_item(start_button)
+        )
+        
+        # Efface le message initial du défi
+        try:
+            original_message = await interaction.channel.fetch_message(self.message_id)
+            await original_message.delete()
+        except discord.NotFound:
+            pass
 
 @bot.tree.command(name="duel", description="Lancer un défi Mastermind avec un montant.")
 @app_commands.describe(montant="Montant misé en kamas")
