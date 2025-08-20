@@ -38,7 +38,7 @@ conn.commit()
 
 # --- COULEURS POUR LE JEU MASTERMIND ---
 COULEURS = ["🔴", "🔵", "🟢", "🟡", "🟣", "⚫"]
-LONGUEUR_CODE = 5  # <--- VALEUR MODIFIÉE ICI
+LONGUEUR_CODE = 4  # <--- VALEUR MODIFIÉE ICI
 
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error):
