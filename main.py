@@ -23,7 +23,7 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 mastermind_games = {}
 
 # --- CONNEXION À LA BASE DE DONNÉES ---
-conn = sqlite2.connect("mastermind_stats.db")
+conn = sqlite3.connect("mastermind_stats.db")
 c = conn.cursor()
 c.execute("""
 CREATE TABLE IF NOT EXISTS mastermind_games (
