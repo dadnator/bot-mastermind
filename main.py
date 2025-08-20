@@ -9,11 +9,13 @@ import sqlite3
 from datetime import datetime
 
 # --- TOKEN ET INTENTS ---
+# Assurez-vous d'avoir une variable d'environnement 'TOKEN_BOT_DISCORD'
 token = os.environ['TOKEN_BOT_DISCORD']
 
-ID_CROUPIER = 1401471414262829066
-ID_MEMBRE = 1366378672281620495
-ID_SALON_DUEL = 1407672571381678120
+# Remplissez ces IDs avec les vôtres
+ID_CROUPIER = 1406210029815861258
+ID_MEMBRE = 1406210131515019355
+ID_SALON_DUEL = 1404445873236213820
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
@@ -21,7 +23,7 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 mastermind_games = {}
 
 # --- CONNEXION À LA BASE DE DONNÉES ---
-conn = sqlite3.connect("mastermind_stats.db")
+conn = sqlite2.connect("mastermind_stats.db")
 c = conn.cursor()
 c.execute("""
 CREATE TABLE IF NOT EXISTS mastermind_games (
@@ -48,7 +50,6 @@ def calculer_indices(code_secret, proposition):
     code_secret_copie = list(code_secret)
     proposition_copie = list(proposition)
 
-    # D'abord, trouver les noirs
     i = 0
     while i < len(code_secret_copie):
         if proposition_copie[i] == code_secret_copie[i]:
@@ -58,7 +59,6 @@ def calculer_indices(code_secret, proposition):
             i -= 1
         i += 1
 
-    # Puis, trouver les blancs
     for couleur_prop in proposition_copie:
         if couleur_prop in code_secret_copie:
             blancs += 1
@@ -66,13 +66,11 @@ def calculer_indices(code_secret, proposition):
 
     return noirs, blancs
 
-async def jouer_mastermind(interaction: discord.Interaction, game_data, original_message):
+async def jouer_mastermind(interaction: discord.Interaction, game_data):
     joueur1 = game_data["joueur1"]
     joueur2 = game_data["joueur2"]
     montant = game_data["montant"]
     code_secret = game_data["code_secret"]
-    
-    await original_message.delete()
     
     game_embed = discord.Embed(
         title="🧠 Mastermind - En cours",
@@ -93,7 +91,6 @@ async def jouer_mastermind(interaction: discord.Interaction, game_data, original
             return m.author.id == joueur2.id and m.channel.id == interaction.channel.id and all(c in COULEURS for c in m.content.split()) and len(m.content.split()) == LONGUEUR_CODE
 
         try:
-            await game_message.edit(embed=game_embed)
             msg = await bot.wait_for('message', check=check, timeout=120.0)
             proposition = msg.content.split()
             await msg.delete()
@@ -117,13 +114,13 @@ async def jouer_mastermind(interaction: discord.Interaction, game_data, original
             
             tentatives_restantes -= 1
             game_embed.description = f"**{joueur2.mention}**, il te reste **{tentatives_restantes}** tentatives pour trouver le code de **{joueur1.mention}**."
+            await game_message.edit(embed=game_embed)
 
         except asyncio.TimeoutError:
-            gagnant = joueur1 # Le joueur 2 a perdu par inactivité
+            gagnant = joueur1
             break
     
     result_embed = None
-    montant_gagne = 0
     gagnant_id = 0
 
     if gagnant:
@@ -156,7 +153,7 @@ async def jouer_mastermind(interaction: discord.Interaction, game_data, original
               (joueur1.id, joueur2.id, montant, gagnant_id, len(historique_tours), now))
     conn.commit()
     
-    mastermind_games.pop(original_message.id, None)
+    mastermind_games.pop(game_data["original_message_id"], None)
 
 
 # --- MODAL POUR LE CODE SECRET ---
@@ -164,7 +161,7 @@ class CodeModal(discord.ui.Modal, title="Choix du code secret"):
     code_input = discord.ui.TextInput(
         label=f"Saisissez le code ({LONGUEUR_CODE} couleurs)",
         placeholder="Séparez les couleurs par un espace (ex: 🔴 🔵 🟢 🟡)",
-        min_length=LONGUEUR_CODE * 2 + LONGUEUR_CODE - 1, # Longueur de l'emoji + espace
+        min_length=LONGUEUR_CODE * 2 + LONGUEUR_CODE - 1,
         max_length=LONGUEUR_CODE * 2 + LONGUEUR_CODE - 1
     )
 
@@ -182,11 +179,18 @@ class CodeModal(discord.ui.Modal, title="Choix du code secret"):
             return
 
         self.game_data["code_secret"] = proposition
+        
         await interaction.response.send_message(
             f"✅ Code secret enregistré ! La partie va commencer.", ephemeral=True
         )
-        
-        await jouer_mastermind(interaction, self.game_data, self.game_data["original_message"])
+
+        try:
+            original_message = await interaction.channel.fetch_message(self.game_data["original_message_id"])
+            await original_message.delete()
+        except discord.errors.NotFound:
+            pass
+
+        await jouer_mastermind(interaction, self.game_data)
 
 
 # --- VUES ET COMMANDES ---
@@ -268,25 +272,9 @@ class MastermindView(discord.ui.View):
             await interaction.response.send_message("❌ Seul le croupier peut lancer la partie.", ephemeral=True)
             return
 
-    # Mettez à jour le message initial pour désactiver les boutons.
-    # On utilise un try...except pour gérer le cas où le message aurait été supprimé.
-        try:
-            for item in self.children:
-                item.disabled = True
-            await interaction.response.edit_message(view=self)
+        game_data = mastermind_games.get(self.message_id)
         
-            game_data = mastermind_games.get(self.message_id)
-            game_data["original_message"] = await interaction.channel.fetch_message(self.message_id)
-        
-            # Envoie le modal au joueur 1 (créateur de la partie)
-            await interaction.followup.send_modal(CodeModal(game_data))
-
-        except discord.errors.NotFound:
-            # Si le message initial n'est pas trouvé (car il a été supprimé), on envoie un message d'erreur.
-            await interaction.response.send_message("❌ Le défi n'existe plus car le message initial a été supprimé. Veuillez en créer un nouveau.", ephemeral=True)
-        
-        # On supprime la partie du dictionnaire de parties pour éviter les conflits futurs.
-        mastermind_games.pop(self.message_id, None)
+        await interaction.response.send_modal(CodeModal(game_data))
 
 
 @bot.tree.command(name="duel", description="Lancer un défi Mastermind avec un montant.")
@@ -330,7 +318,7 @@ async def mastermind_game(interaction: discord.Interaction, montant: int):
     sent_message = await interaction.original_response()
 
     view.message_id = sent_message.id
-    mastermind_games[sent_message.id] = {"joueur1": interaction.user, "montant": montant, "joueur2": None, "croupier": None}
+    mastermind_games[sent_message.id] = {"joueur1": interaction.user, "montant": montant, "joueur2": None, "croupier": None, "original_message_id": sent_message.id}
     await sent_message.edit(view=view)
 
 
@@ -361,13 +349,13 @@ async def quit_game(interaction: discord.Interaction):
             embed_initial.title = "🧠 Défi relancé !"
             embed_initial.description = f"**{game_data['joueur1'].mention}** lance un défi pour **{game_data['montant']:,.0f}".replace(",", " ") + " kamas** 💰\n" + "Clique sur le bouton ci-dessous pour le rejoindre !"
             embed_initial.color = discord.Color.gold()
-            new_view = MastermindView(game_initial.id, game_data['joueur1'], game_data['montant'])
+            new_view = MastermindView(message_initial.id, game_data['joueur1'], game_data['montant'])
             role_membre = interaction.guild.get_role(ID_MEMBRE)
             ping_content = ""
             if role_membre:
                 ping_content = f"{role_membre.mention} — Un nouveau défi Mastermind est prêt !"
             await message_initial.edit(content=ping_content, embed=embed_initial, view=new_view, allowed_mentions=discord.AllowedMentions(roles=True))
-            mastermind_games[game_initial.id] = {"joueur1": game_data['joueur1'], "montant": game_data['montant'], "joueur2": None, "croupier": None}
+            mastermind_games[message_initial.id] = {"joueur1": game_data['joueur1'], "montant": game_data['montant'], "joueur2": None, "croupier": None, "original_message_id": message_initial.id}
             await interaction.response.send_message("✅ Tu as quitté le défi. Le créateur attend maintenant un autre joueur.", ephemeral=True)
         else:
             embed_initial.title = "❌ Défi annulé"
@@ -381,10 +369,6 @@ async def quit_game(interaction: discord.Interaction):
 
 
 # --- STATS VIEWS AND COMMANDS ---
-# Le reste des commandes /statsmastermind et /mystatsmastermind reste identique.
-# ... (le code des stats est le même que celui précédemment fourni)
-# ... (mais il faut l'inclure ici pour que le code soit complet)
-
 class MastermindStatsView(discord.ui.View):
     def __init__(self, ctx, entries, page=0):
         super().__init__(timeout=120)
