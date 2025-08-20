@@ -186,14 +186,29 @@ class SecretCodeView(discord.ui.View):
         self.add_item(validate_button)
         
     async def add_color(self, interaction: discord.Interaction):
+    # Chercher le bouton qui a été cliqué en utilisant son 'custom_id'
+    button_clicked = next(
+        (item for item in self.children if isinstance(item, discord.ui.Button) and item.custom_id == interaction.data.get("custom_id")),
+        None
+    )
+
+    if button_clicked:
         if len(self.code_secret) < LONGUEUR_CODE:
-            # We use interaction.item to directly get the button that was clicked.
-            # This is the most reliable way to get the emoji name.
-            self.code_secret.append(interaction.item.emoji.name)
+            # Récupérer l'emoji du bouton trouvé
+            emoji_name = button_clicked.emoji.name
+            self.code_secret.append(emoji_name)
             self.update_embed()
             await interaction.response.edit_message(embed=self.embed, view=self)
         else:
             await interaction.response.send_message("❌ Le code a déjà le nombre maximum de couleurs.", ephemeral=True)
+    else:
+        # Gérer le cas où le bouton n'est pas trouvé (par exemple, si le bot a redémarré)
+        await interaction.response.send_message("❌ Ce bouton n'est plus actif.", ephemeral=True)
+        # Tenter de supprimer le message pour éviter d'autres erreurs
+        try:
+            await interaction.message.delete()
+        except discord.errors.NotFound:
+            pass
 
     async def clear_code(self, interaction: discord.Interaction):
         self.code_secret = []
