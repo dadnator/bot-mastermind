@@ -185,9 +185,9 @@ class SecretCodeView(discord.ui.View):
 
     async def add_color(self, interaction: discord.Interaction):
         if len(self.code_secret) < LONGUEUR_CODE:
-        # On utilise interaction.item pour accéder au bouton cliqué directement
-        self.code_secret.append(interaction.item.emoji.name)
-        self.update_embed()
+            # On utilise interaction.item pour accéder au bouton cliqué directement
+            self.code_secret.append(interaction.item.emoji.name)
+            self.update_embed()
             await interaction.response.edit_message(embed=self.embed, view=self)
         else:
             await interaction.response.send_message("❌ Le code a déjà le nombre maximum de couleurs.", ephemeral=True)
