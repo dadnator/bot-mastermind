@@ -279,7 +279,7 @@ class MastermindView(discord.ui.View):
         await interaction.response.send_modal(CodeModal(game_data))
 
 
-@bot.tree.command(name="mastermind", description="Lancer un défi Mastermind avec un montant.")
+@bot.tree.command(name="duel", description="Lancer un défi Mastermind avec un montant.")
 @app_commands.describe(montant="Montant misé en kamas")
 async def mastermind_game(interaction: discord.Interaction, montant: int):
     if interaction.channel.id != ID_SALON_DUEL:
@@ -445,7 +445,7 @@ class MastermindStatsView(discord.ui.View):
         self.update_buttons()
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
-@bot.tree.command(name="statsmastermind", description="Affiche les stats du Mastermind")
+@bot.tree.command(name="statsall", description="Affiche les stats du Mastermind")
 async def stats_mastermind(interaction: discord.Interaction):
     if interaction.channel.id != ID_SALON_DUEL:
         await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #『🎲』dés.", ephemeral=True)
@@ -479,7 +479,7 @@ async def stats_mastermind(interaction: discord.Interaction):
     view = MastermindStatsView(interaction, stats)
     await interaction.response.send_message(embed=view.get_embed(), view=view, ephemeral=False)
 
-@bot.tree.command(name="mystatsmastermind", description="Affiche tes statistiques Mastermind personnelles.")
+@bot.tree.command(name="mystats", description="Affiche tes statistiques Mastermind personnelles.")
 async def mystats_mastermind(interaction: discord.Interaction):
     user_id = interaction.user.id
 
