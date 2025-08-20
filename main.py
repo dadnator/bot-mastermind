@@ -264,26 +264,26 @@ class MastermindView(discord.ui.View):
         await self.update_view(interaction, embed, content=None)
 
     async def lancer_game(self, interaction: discord.Interaction):
-    if interaction.user.id != self.croupier.id:
-        await interaction.response.send_message("❌ Seul le croupier peut lancer la partie.", ephemeral=True)
-        return
+        if interaction.user.id != self.croupier.id:
+            await interaction.response.send_message("❌ Seul le croupier peut lancer la partie.", ephemeral=True)
+            return
 
     # Mettez à jour le message initial pour désactiver les boutons.
     # On utilise un try...except pour gérer le cas où le message aurait été supprimé.
-    try:
-        for item in self.children:
-            item.disabled = True
-        await interaction.response.edit_message(view=self)
+        try:
+            for item in self.children:
+                item.disabled = True
+            await interaction.response.edit_message(view=self)
         
-        game_data = mastermind_games.get(self.message_id)
-        game_data["original_message"] = await interaction.channel.fetch_message(self.message_id)
+            game_data = mastermind_games.get(self.message_id)
+            game_data["original_message"] = await interaction.channel.fetch_message(self.message_id)
         
-        # Envoie le modal au joueur 1 (créateur de la partie)
-        await interaction.followup.send_modal(CodeModal(game_data))
+            # Envoie le modal au joueur 1 (créateur de la partie)
+            await interaction.followup.send_modal(CodeModal(game_data))
 
-    except discord.errors.NotFound:
-        # Si le message initial n'est pas trouvé (car il a été supprimé), on envoie un message d'erreur.
-        await interaction.response.send_message("❌ Le défi n'existe plus car le message initial a été supprimé. Veuillez en créer un nouveau.", ephemeral=True)
+        except discord.errors.NotFound:
+            # Si le message initial n'est pas trouvé (car il a été supprimé), on envoie un message d'erreur.
+            await interaction.response.send_message("❌ Le défi n'existe plus car le message initial a été supprimé. Veuillez en créer un nouveau.", ephemeral=True)
         
         # On supprime la partie du dictionnaire de parties pour éviter les conflits futurs.
         mastermind_games.pop(self.message_id, None)
