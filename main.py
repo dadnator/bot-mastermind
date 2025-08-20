@@ -9,7 +9,6 @@ import sqlite3
 from datetime import datetime
 
 # --- TOKEN ET INTENTS ---
-# Assurez-vous d'avoir une variable d'environnement 'TOKEN_BOT_DISCORD'
 token = os.environ['TOKEN_BOT_DISCORD']
 
 # Remplissez ces IDs avec les vôtres
@@ -156,44 +155,70 @@ async def jouer_mastermind(interaction: discord.Interaction, game_data):
     mastermind_games.pop(game_data["original_message_id"], None)
 
 
-# --- MODAL POUR LE CODE SECRET ---
-class CodeModal(discord.ui.Modal, title="Choix du code secret"):
-    code_input = discord.ui.TextInput(
-        label=f"Saisissez le code ({LONGUEUR_CODE} couleurs)",
-        placeholder="Séparez les couleurs par un espace (ex: 🔴 🔵 🟢 🟡)",
-        min_length=LONGUEUR_CODE * 2 + LONGUEUR_CODE - 1,
-        max_length=LONGUEUR_CODE * 2 + LONGUEUR_CODE - 1
-    )
-
+# --- NOUVELLE VUE POUR LE CHOIX DU CODE SECRET ---
+class SecretCodeView(discord.ui.View):
     def __init__(self, game_data):
-        super().__init__()
+        super().__init__(timeout=300)
         self.game_data = game_data
-        
-    async def on_submit(self, interaction: discord.Interaction):
-        proposition = self.code_input.value.split()
-        if len(proposition) != LONGUEUR_CODE or not all(c in COULEURS for c in proposition):
-            await interaction.response.send_message(
-                f"❌ Le code doit être composé de {LONGUEUR_CODE} couleurs parmi " + " | ".join(COULEURS),
-                ephemeral=True
-            )
-            return
-
-        self.game_data["code_secret"] = proposition
-        
-        await interaction.response.send_message(
-            f"✅ Code secret enregistré ! La partie va commencer.", ephemeral=True
+        self.code_secret = []
+        self.embed = discord.Embed(
+            title="Saisissez le code secret",
+            description=f"Choisissez {LONGUEUR_CODE} couleurs en cliquant sur les boutons.\nVotre code actuel : ",
+            color=discord.Color.dark_theme()
         )
+        self.add_buttons()
 
+    def add_buttons(self):
+        for couleur in COULEURS:
+            button = discord.ui.Button(label=couleur, style=discord.ButtonStyle.secondary, emoji=couleur)
+            button.callback = self.add_color
+            self.add_item(button)
+
+        self.add_item(discord.ui.Button(label="❌ Effacer", style=discord.ButtonStyle.red, custom_id="clear", row=1))
+        self.add_item(discord.ui.Button(label="✅ Valider", style=discord.ButtonStyle.green, custom_id="validate", row=1))
+        
+        for item in self.children:
+            if isinstance(item, discord.ui.Button) and item.custom_id == "clear":
+                item.callback = self.clear_code
+            if isinstance(item, discord.ui.Button) and item.custom_id == "validate":
+                item.callback = self.validate_code
+
+    async def add_color(self, interaction: discord.Interaction):
+        if len(self.code_secret) < LONGUEUR_CODE:
+            self.code_secret.append(interaction.data['emoji']['name'])
+            self.update_embed()
+            await interaction.response.edit_message(embed=self.embed, view=self)
+        else:
+            await interaction.response.send_message("❌ Le code a déjà le nombre maximum de couleurs.", ephemeral=True)
+
+    async def clear_code(self, interaction: discord.Interaction):
+        self.code_secret = []
+        self.update_embed()
+        await interaction.response.edit_message(embed=self.embed, view=self)
+
+    async def validate_code(self, interaction: discord.Interaction):
+        if len(self.code_secret) != LONGUEUR_CODE:
+            await interaction.response.send_message(f"❌ Veuillez choisir un code de {LONGUEUR_CODE} couleurs avant de valider.", ephemeral=True)
+            return
+        
+        self.game_data["code_secret"] = self.code_secret
+        
+        await interaction.response.edit_message(content="✅ Code secret enregistré ! La partie va commencer.", embed=None, view=None)
+        
         try:
             original_message = await interaction.channel.fetch_message(self.game_data["original_message_id"])
             await original_message.delete()
         except discord.errors.NotFound:
             pass
-
+        
         await jouer_mastermind(interaction, self.game_data)
 
+    def update_embed(self):
+        code_str = " ".join(self.code_secret)
+        self.embed.description = f"Choisissez {LONGUEUR_CODE} couleurs en cliquant sur les boutons.\nVotre code actuel : `{code_str}`"
 
-# --- VUES ET COMMANDES ---
+
+# --- CLASSES ET COMMANDES ---
 class MastermindView(discord.ui.View):
     def __init__(self, message_id, joueur1, montant):
         super().__init__(timeout=None)
@@ -274,7 +299,13 @@ class MastermindView(discord.ui.View):
 
         game_data = mastermind_games.get(self.message_id)
         
-        await interaction.response.send_modal(CodeModal(game_data))
+        # Envoie un message temporaire avec des boutons au joueur 1
+        await interaction.response.send_message(
+            content=f"**{game_data['joueur1'].mention}**, c'est à toi de choisir le code secret !",
+            embed=SecretCodeView(game_data).embed,
+            view=SecretCodeView(game_data),
+            ephemeral=True
+        )
 
 
 @bot.tree.command(name="duel", description="Lancer un défi Mastermind avec un montant.")
