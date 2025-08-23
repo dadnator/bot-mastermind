@@ -440,11 +440,11 @@ class MastermindView(discord.ui.View):
 await interaction.response.defer()
 
     # Deleting the original message of the challenge.
-    try:
-        original_message = await interaction.channel.fetch_message(self.message_id)
-        await original_message.delete()
-    except discord.NotFound:
-        pass
+try:
+    original_message = await interaction.channel.fetch_message(self.message_id)
+    await original_message.delete()
+except discord.NotFound:
+    pass
 
     # We send the new public message with the button for Player 1.
     message_to_send_joueur1 = await interaction.channel.send(
