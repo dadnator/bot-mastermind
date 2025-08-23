@@ -395,9 +395,9 @@ class MastermindView(discord.ui.View):
 
     async def lancer_game(self, interaction: discord.Interaction):
     # This is where the function starts, at a consistent indentation level.
-    if interaction.user.id != self.croupier.id:
-        await interaction.response.send_message("❌ Seul le croupier peut lancer la partie.", ephemeral=True)
-        return
+        if interaction.user.id != self.croupier.id:
+            await interaction.response.send_message("❌ Seul le croupier peut lancer la partie.", ephemeral=True)
+            return
 
     game_data = mastermind_games.get(self.message_id)
 
