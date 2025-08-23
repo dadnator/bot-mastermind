@@ -394,21 +394,21 @@ class MastermindView(discord.ui.View):
         await self.update_view(interaction, embed, content=None)
 
     async def lancer_game(self, interaction: discord.Interaction):
-    if interaction.user.id != self.croupier.id:
-        await interaction.response.send_message("❌ Seul le croupier peut lancer la partie.", ephemeral=True)
-        return
+        if interaction.user.id != self.croupier.id:
+            await interaction.response.send_message("❌ Seul le croupier peut lancer la partie.", ephemeral=True)
+            return
 
-    game_data = mastermind_games.get(self.message_id)
+        game_data = mastermind_games.get(self.message_id)
 
-    # 1. We create the button and the view.
-    start_button = discord.ui.Button(
-        label="Créer mon code secret",
-        style=discord.ButtonStyle.primary,
-        custom_id=f"start_code_selection_{self.joueur1.id}"
-    )
+        # 1. We create the button and the view.
+        start_button = discord.ui.Button(
+            label="Créer mon code secret",
+            style=discord.ButtonStyle.primary,
+            custom_id=f"start_code_selection_{self.joueur1.id}"
+        )
 
-    start_game_view = discord.ui.View()
-    start_game_view.add_item(start_button)
+        start_game_view = discord.ui.View()
+        start_game_view.add_item(start_button)
 
     async def start_game_callback(btn_interaction: discord.Interaction):
         # We check if the player is correct.
