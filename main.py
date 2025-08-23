@@ -434,7 +434,7 @@ class MastermindView(discord.ui.View):
 
     # We respond to the initial interaction and delete the original message.
     # We use a deferral to acknowledge the interaction first.
-    await interaction.response.defer()
+        await interaction.response.defer()
 
     # Deleting the original message of the challenge.
     try:
