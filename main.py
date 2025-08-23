@@ -437,7 +437,7 @@ class MastermindView(discord.ui.View):
 
     # Now, we handle the initial interaction and message deletion.
     # This section is at the same indentation level as the rest of the main function's logic.
-    await interaction.response.defer()
+await interaction.response.defer()
 
     # Deleting the original message of the challenge.
     try:
