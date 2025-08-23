@@ -403,12 +403,14 @@ class MastermindView(discord.ui.View):
         # Envoie une réponse d'interaction initiale qui va être mise à jour
         await interaction.response.edit_message(content="La partie va commencer ! Le croupier a lancé le jeu.", embed=None, view=None)
 
-        # On crée le bouton que seul le joueur 1 peut utiliser
+        # Création d’une vue
+        start_view = discord.ui.View()
         start_button = discord.ui.Button(
             label="Créer mon code secret",
             style=discord.ButtonStyle.primary,
             custom_id=f"start_code_selection_{self.joueur1.id}"
         )
+        start_view.add_item(start_button)
 
         async def start_game_callback(btn_interaction: discord.Interaction):
             # Vérifie que c'est bien le joueur 1 qui a cliqué
@@ -416,23 +418,25 @@ class MastermindView(discord.ui.View):
                 await btn_interaction.response.send_message("❌ Ce bouton est réservé au joueur 1.", ephemeral=True)
                 return
 
-            # Envoie la vue du code secret en tant que message éphémère au joueur 1
+            # Affiche la vue du code secret
+            secret_view = SecretCodeView(game_data)
             await btn_interaction.response.send_message(
                 content="C'est à toi de choisir le code secret !",
-                embed=SecretCodeView(game_data).embed,
-                view=SecretCodeView(game_data),
+                embed=secret_view.embed,
+                view=secret_view,
                 ephemeral=True
             )
-            # Désactive le bouton pour qu'il ne puisse être utilisé qu'une seule fois
+
+            # ✅ Désactive le bouton et mets à jour la vue
             start_button.disabled = True
-            await btn_interaction.message.edit(view=btn_interaction.message.view)
+            await btn_interaction.message.edit(view=start_view)
 
         start_button.callback = start_game_callback
         
-        # Envoie un nouveau message avec le bouton pour le joueur 1
+        # Envoie du message avec une vraie vue
         await interaction.channel.send(
             f"La partie a été lancée par le croupier ! **{self.joueur1.mention}**, clique sur le bouton ci-dessous pour créer ton code secret.",
-            view=discord.ui.View().add_item(start_button)
+            view=start_view
         )
         
         # Efface le message initial du défi
