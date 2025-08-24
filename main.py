@@ -66,10 +66,9 @@ def calculer_indices(code_secret, proposition):
     return noirs, blancs
 
 # --- NOUVELLE VUE POUR GÉRER LA PARTIE POUR LE JOUEUR 2 ---
-# --- NOUVELLE VUE POUR GÉRER LA PARTIE POUR LE JOUEUR 2 ---
 class MastermindGameView(discord.ui.View):
     def __init__(self, game_data, game_message):
-        super().__init__(timeout=120)  # Timeout de 2 minutes pour chaque tour
+        super().__init__(timeout=120)
         self.game_data = game_data
         self.game_message = game_message
         self.tentatives_restantes = MAX_TENTATIVES
@@ -80,13 +79,11 @@ class MastermindGameView(discord.ui.View):
         self.update_embed()
 
     def add_buttons(self):
-        # Boutons pour les couleurs
         for couleur in COULEURS:
             button = discord.ui.Button(label=couleur, style=discord.ButtonStyle.secondary, emoji=couleur)
             button.callback = self.add_color_guess
             self.add_item(button)
         
-        # Bouton d'effacement et de validation
         clear_button = discord.ui.Button(label="❌ Effacer", style=discord.ButtonStyle.red, custom_id="clear_guess", row=1)
         clear_button.callback = self.clear_guess
         self.add_item(clear_button)
@@ -105,8 +102,6 @@ class MastermindGameView(discord.ui.View):
             color=discord.Color.blue()
         )
         embed.add_field(name="Couleurs disponibles", value=" | ".join(COULEURS), inline=False)
-        
-        # Le nouveau champ a été ajouté ici
         embed.add_field(
             name="Indices", 
             value="🖤 **Noir** : Bonne couleur, bonne place.\n🤍 **Blanc** : Bonne couleur, mauvaise place.",
@@ -196,6 +191,7 @@ class MastermindGameView(discord.ui.View):
         
         result_embed = None
         gagnant_id = 0
+        montant_gagne = 0
 
         if gagnant.id == joueur2.id:
             montant_total = 2 * montant
@@ -211,13 +207,16 @@ class MastermindGameView(discord.ui.View):
             result_embed.add_field(name="🏆 Gagnant", value=f"**{joueur2.mention}** remporte **{format(montant_gagne, ',').replace(',', ' ')}** kamas 💰 (après 5% de commission)", inline=False)
         else:
             gagnant_id = joueur1.id
+            montant_total = 2 * montant
+            commission = int(montant_total * 0.05)
+            montant_gagne = montant_total - commission
             result_embed = discord.Embed(
                 title="❌ Défaite !",
                 description=f"{joueur2.mention} n’a pas trouvé le code secret de {joueur1.mention}. Le code secret était : **{' '.join(code_secret)}**",
                 color=discord.Color.red()
             )
             result_embed.add_field(name="Tentatives", value=f"{len(self.historique_tours)}/{MAX_TENTATIVES}", inline=False)
-            result_embed.add_field(name="🏆 Gagnant", value=f"**{joueur1.mention}** remporte **{format(montant_gagne, ',').replace(',', ' ')}** kamas 💰 (après 5% de commission)", inline=False)
+            result_embed.add_field(name="🏆 Gagnant", value=f"**{joueur1.mention}** remporte **{format(montant_gagne, ',').replace(',', ' ')}** kamas 💰 (la mise de l'adversaire)", inline=False)
         
         await self.game_message.edit(embed=result_embed, view=None)
         
@@ -233,7 +232,6 @@ async def jouer_mastermind(interaction: discord.Interaction, game_data):
     joueur1 = game_data["joueur1"]
     joueur2 = game_data["joueur2"]
     
-    # On envoie un premier message d'attente pour le joueur 2
     initial_embed = discord.Embed(
         title="🧠 Mastermind - En cours",
         description=f"**{joueur2.mention}**, c'est à ton tour de jouer. Fais ta première proposition.",
@@ -245,7 +243,6 @@ async def jouer_mastermind(interaction: discord.Interaction, game_data):
 
     game_message = await interaction.channel.send(embed=initial_embed)
     
-    # On crée la vue et on l'envoie au joueur 2
     view = MastermindGameView(game_data, game_message)
     await game_message.edit(embed=view.update_embed(), view=view)
 
@@ -400,10 +397,8 @@ class MastermindView(discord.ui.View):
 
         game_data = mastermind_games.get(self.message_id)
 
-        # Envoie une réponse d'interaction initiale qui va être mise à jour
         await interaction.response.edit_message(content="La partie va commencer ! Le croupier a lancé le jeu.", embed=None, view=None)
 
-        # Création d’une vue
         start_view = discord.ui.View()
         start_button = discord.ui.Button(
             label="Créer mon code secret",
@@ -413,12 +408,10 @@ class MastermindView(discord.ui.View):
         start_view.add_item(start_button)
 
         async def start_game_callback(btn_interaction: discord.Interaction):
-            # Vérifie que c'est bien le joueur 1 qui a cliqué
             if btn_interaction.user.id != self.joueur1.id:
                 await btn_interaction.response.send_message("❌ Ce bouton est réservé au joueur 1.", ephemeral=True)
                 return
 
-            # Affiche la vue du code secret
             secret_view = SecretCodeView(game_data)
             await btn_interaction.response.send_message(
                 content="C'est à toi de choisir le code secret !",
@@ -427,19 +420,16 @@ class MastermindView(discord.ui.View):
                 ephemeral=True
             )
 
-            # ✅ Désactive le bouton et mets à jour la vue
             start_button.disabled = True
             await btn_interaction.message.edit(view=start_view)
 
         start_button.callback = start_game_callback
         
-        # Envoie du message avec une vraie vue
         await interaction.channel.send(
             f"La partie a été lancée par le croupier ! **{self.joueur1.mention}**, clique sur le bouton ci-dessous pour créer ton code secret.",
             view=start_view
         )
         
-        # Efface le message initial du défi
         try:
             original_message = await interaction.channel.fetch_message(self.message_id)
             await original_message.delete()
