@@ -208,16 +208,16 @@ class MastermindGameView(discord.ui.View):
                 color=discord.Color.green()
             )
             result_embed.add_field(name="Tentatives", value=f"{len(self.historique_tours)}/{MAX_TENTATIVES}", inline=False)
-            result_embed.add_field(name="Gain", value=f"**{format(montant_gagne, ',').replace(',', ' ')}** kamas (après commission)", inline=False)
+            result_embed.add_field(name="🏆 Gagnant", value=f"**{joueur2.mention}** remporte **{net_gain:,}".replace(",", "\u00A0") + "\u00A0kamas** 💰 (après 5% de commission)", inline=False)
         else:
             gagnant_id = joueur1.id
             result_embed = discord.Embed(
                 title="❌ Défaite !",
-                description=f"{joueur2.mention} a échoué. Le code secret était : **{' '.join(code_secret)}**",
+                description=f"{joueur2.mention} n’a pas trouvé le code secret de {joueur1.mention}. Le code secret était : **{' '.join(code_secret)}**",
                 color=discord.Color.red()
             )
             result_embed.add_field(name="Tentatives", value=f"{len(self.historique_tours)}/{MAX_TENTATIVES}", inline=False)
-            result_embed.add_field(name="Perte", value=f"**{format(montant, ',').replace(',', ' ')}** kamas", inline=False)
+            result_embed.add_field(name="🏆 Gagnant", value=f"**{joueur1.mention}** remporte **{net_gain:,}".replace(",", "\u00A0") + "\u00A0kamas** 💰 (après 5% de commission)", inline=False)
         
         await self.game_message.edit(embed=result_embed, view=None)
         
