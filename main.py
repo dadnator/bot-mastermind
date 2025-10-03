@@ -216,7 +216,7 @@ class MastermindGameView(discord.ui.View):
                 color=discord.Color.red()
             )
             result_embed.add_field(name="Tentatives", value=f"{len(self.historique_tours)}/{MAX_TENTATIVES}", inline=False)
-            result_embed.add_field(name="🏆 Gagnant", value=f"**{joueur1.mention}** remporte **{format(montant_gagne, ',').replace(',', ' ')}** kamas 💰 (la mise de l'adversaire)", inline=False)
+            result_embed.add_field(name="🏆 Gagnant", value=f"**{joueur1.mention}** remporte **{format(montant_gagne, ',').replace(',', ' ')}** kamas 💰 (après 5% de commission)", inline=False)
         
         await self.game_message.edit(embed=result_embed, view=None)
         
